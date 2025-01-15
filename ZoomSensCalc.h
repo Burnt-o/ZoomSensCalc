@@ -26,7 +26,7 @@ std::vector<float> calcZoomSensManip(
     float startingAngle,
     float targetAngle1,
     float targetAngle2,
-    float zoomFactor = 2,
-    int counterClockwiseTurns = 0,
-    int maxDots = 5
+    float zoomFactor,
+    int counterClockwiseTurns,
+    int maxDots
 );
