@@ -33,7 +33,9 @@ std::vector<float> dotTowardAngle(
             rightDot = startingAngle;
             leftDot = rightDot + viewAngleIncrement;
         }
-
+        else
+            if (startingAngle == targetAngle) outAngles.push_back(-1);
+    if (startingAngle == targetAngle) outAngles.push_back(-2);
     outAngles.push_back(rightDot);
     outAngles.push_back(leftDot);
     return outAngles;
@@ -64,4 +66,57 @@ float angleAfterTurns(
         }
     }
     return startingAngle;
+}
+
+std::vector<float> calcZoomSensManip(
+    float viewAngleIncrement,
+    float startingAngle,
+    float targetAngle1,
+    float targetAngle2,
+    float zoomFactor = 2,
+    int counterClockwiseTurns = 0,
+    int maxDots = 5
+) {
+    startingAngle = angleAfterTurns(viewAngleIncrement, startingAngle, counterClockwiseTurns);
+    std::vector<float> x1x2 = dotTowardAngle(viewAngleIncrement, startingAngle, targetAngle1);
+    std::vector<float> p1p2 = dotTowardAngle(viewAngleIncrement, startingAngle, targetAngle2);
+
+    std::vector<float> out = {};
+    
+    if (x1x2[0] == -1) std::cerr << "Target Angle 1 and starting angle are already matching!" << std::endl; return out;
+    if (p1p2[0] == -1) std::cerr << "Target Angle 2 and starting angle are already matching!" << std::endl; return out;
+    if (x1x2[0] == -2) std::cerr << "Target Angle 1 does not need a zoom manip" << std::endl; return out;
+    if (p1p2[0] == -2) std::cerr << "Target Angle 2 does not need a zoom manip" << std::endl; return out;
+
+    float eq1delta1 = targetAngle1 - x1x2[0];
+    float eq2delta1 = targetAngle2 - p1p2[0];
+    float y = 0.0f;
+    int b = 0;
+    float bCheck = 0.0f;
+
+    // bCheck exists only to check if b is actually an integer
+    // Note: One more way to check might be eqdelta % y == 0
+    for (short a = 1; a <= maxDots; a++) {
+        y = eq1delta1/a;
+        b = eq2delta1/y;
+        bCheck = eq2delta1/y;
+        if (b == bCheck) {
+            out.push_back(y/(viewAngleIncrement/zoomFactor));
+            out.push_back(a);
+            out.push_back(b-a);
+        }
+    }
+    float eq1delta2 = targetAngle1 - x1x2[1];
+    float eq2delta2 = targetAngle2 - p1p2[1];
+    for (short a = -1; a >= -maxDots; a--) {
+        y = eq1delta2/a;
+        b = eq2delta2/y;
+        bCheck = eq2delta2/y;
+        if (b == bCheck) {
+            out.push_back(y/(viewAngleIncrement/zoomFactor));
+            out.push_back(a);
+            out.push_back(b-a);
+        }
+    }
+    return out;
 }

@@ -20,3 +20,13 @@ float angleAfterTurns(
     float startingAngle,
     int counterClockwiseTurns
 );
+
+std::vector<float> calcZoomSensManip(
+    float viewAngleIncrement,
+    float startingAngle,
+    float targetAngle1,
+    float targetAngle2,
+    float zoomFactor = 2,
+    int counterClockwiseTurns = 0,
+    int maxDots = 5
+);
