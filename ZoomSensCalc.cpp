@@ -60,27 +60,24 @@ float angleAfterTurns(
 std::vector<ZoomSensManipResult> calcZoomSensManip(
     float viewAngleIncrement,
     float startingAngle,
-    float targetAngleLow,
-    float targetAngleHigh,
+    float targetAngel1,
+    float targetAngel2,
     float zoomFactor,
     int counterClockwiseTurns,
     int maxDots
 ) {
     startingAngle = angleAfterTurns(viewAngleIncrement, startingAngle, counterClockwiseTurns);
-    ClosestDotsToAngle x1x2 = dotTowardAngle(viewAngleIncrement, startingAngle, targetAngleLow);
-    ClosestDotsToAngle p1p2 = dotTowardAngle(viewAngleIncrement, startingAngle, targetAngleHigh);
+    ClosestDotsToAngle x1x2 = dotTowardAngle(viewAngleIncrement, startingAngle, targetAngel1);
+    ClosestDotsToAngle p1p2 = dotTowardAngle(viewAngleIncrement, startingAngle, targetAngel2);
 
     std::vector<ZoomSensManipResult> out = {};
 
-    if (startingAngle >= targetAngleLow && startingAngle <= targetAngleHigh)
-    {
-        throw std::exception("startng angle already within target angle range: zoom manip not necessary");
-    }
 
-    float eq1delta1 = targetAngleLow - x1x2.closestRightDot;
-    float eq2delta1 = targetAngleHigh - p1p2.closestRightDot;
-    float eq1delta2 = targetAngleLow - x1x2.closestLeftDot;
-    float eq2delta2 = targetAngleHigh - p1p2.closestLeftDot;
+
+    float eq1delta1 = targetAngel1 - x1x2.closestRightDot;
+    float eq2delta1 = targetAngel2 - p1p2.closestRightDot;
+    float eq1delta2 = targetAngel1 - x1x2.closestLeftDot;
+    float eq2delta2 = targetAngel2 - p1p2.closestLeftDot;
     float y = 0.0f;
     int b = 0;
     float bCheck = 0.0f;
