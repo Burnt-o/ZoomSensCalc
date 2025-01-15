@@ -18,5 +18,15 @@ std::vector<float> dotTowardAngle(
 float angleAfterTurns(
     float viewAngleIncrement,
     float startingAngle,
-    int clockWiseTurns
+    int counterClockwiseTurns
+);
+
+std::vector<float> calcZoomSensManip(
+    float viewAngleIncrement,
+    float startingAngle,
+    float targetAngle1,
+    float targetAngle2,
+    float zoomFactor,
+    int counterClockwiseTurns,
+    int maxDots
 );

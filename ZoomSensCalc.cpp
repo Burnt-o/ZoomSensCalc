@@ -33,7 +33,9 @@ std::vector<float> dotTowardAngle(
             rightDot = startingAngle;
             leftDot = rightDot + viewAngleIncrement;
         }
-
+        else
+            if (startingAngle == targetAngle) outAngles.push_back(-1);
+    if (startingAngle == targetAngle) outAngles.push_back(-2);
     outAngles.push_back(rightDot);
     outAngles.push_back(leftDot);
     return outAngles;
@@ -44,24 +46,90 @@ std::vector<float> dotTowardAngle(
 float angleAfterTurns(
     float viewAngleIncrement,
     float startingAngle,
-    int counterClockiseTurns
+    int counterClockwiseTurns
 ) {
     // Depending on which way we are turning, increment/decrement the startingAngle
     // When we cross the zero boundary, we have completed a turn
     // Since radians work mod two pi, we subtract/add two pi to the resulting angle
-    while (counterClockiseTurns > 0) {
+    while (counterClockwiseTurns > 0) {
         startingAngle -= viewAngleIncrement;
         if (startingAngle < 0) {
-            counterClockiseTurns--;
+            counterClockwiseTurns--;
             startingAngle += twoPi;
         }
     }
-    while (counterClockiseTurns < 0) {
+    while (counterClockwiseTurns < 0) {
         startingAngle += viewAngleIncrement;
         if (startingAngle > twoPi) {
-            counterClockiseTurns++;
+            counterClockwiseTurns++;
             startingAngle -= twoPi;
         }
     }
     return startingAngle;
+}
+
+std::vector<float> calcZoomSensManip(
+    float viewAngleIncrement,
+    float startingAngle,
+    float targetAngle1,
+    float targetAngle2,
+    float zoomFactor,
+    int counterClockwiseTurns,
+    int maxDots
+) {
+    startingAngle = angleAfterTurns(viewAngleIncrement, startingAngle, counterClockwiseTurns);
+    std::vector<float> x1x2 = dotTowardAngle(viewAngleIncrement, startingAngle, targetAngle1);
+    std::vector<float> p1p2 = dotTowardAngle(viewAngleIncrement, startingAngle, targetAngle2);
+
+    std::vector<float> out = {};
+
+    if (x1x2[0] == -1) { std::cout << "Target Angle 1 and starting angle are already matching!" << std::endl; return out; }
+    if (p1p2[0] == -1) { std::cout << "Target Angle 2 and starting angle are already matching!" << std::endl; return out; }
+    if (x1x2[0] == -2) { std::cout << "Target Angle 1 does not need a zoom manip" << std::endl; return out; }
+    if (p1p2[0] == -2) { std::cout << "Target Angle 2 does not need a zoom manip" << std::endl; return out; }
+
+    float eq1delta1 = targetAngle1 - x1x2[0];
+    float eq2delta1 = targetAngle2 - p1p2[0];
+    float eq1delta2 = targetAngle1 - x1x2[1];
+    float eq2delta2 = targetAngle2 - p1p2[1];
+    float y = 0.0f;
+    int b = 0;
+    float bCheck = 0.0f;
+
+    // bCheck exists only to check if b is actually an integer
+    for (short a = 1; a <= maxDots; a++) {
+        y = eq1delta1 / a;
+        b = eq2delta1 / y;
+        bCheck = eq2delta1 / y;
+        if (b == bCheck) {
+            out.push_back(y / (viewAngleIncrement / zoomFactor));
+            out.push_back(a);
+            out.push_back(b - a);
+        }
+        b = eq2delta2 / y;
+        bCheck = eq2delta2 / y;
+        if (b == bCheck) {
+            out.push_back(y / (viewAngleIncrement / zoomFactor));
+            out.push_back(a);
+            out.push_back(b - a);
+        }
+    }
+    for (short a = -1; a >= -maxDots; a--) {
+        y = eq1delta2 / a;
+        b = eq2delta2 / y;
+        bCheck = eq2delta2 / y;
+        if (b == bCheck) {
+            out.push_back(y / (viewAngleIncrement / zoomFactor));
+            out.push_back(a);
+            out.push_back(b - a);
+        }
+        b = eq2delta1 / y;
+        bCheck = eq2delta1 / y;
+        if (b == bCheck) {
+            out.push_back(y / (viewAngleIncrement / zoomFactor));
+            out.push_back(a);
+            out.push_back(b - a);
+        }
+    }
+    return out;
 }
