@@ -1,6 +1,5 @@
 #include "ZoomSensCalc.h"
-
-const float twoPi = 6.283185482f;
+#include "Constants.h"
 
 // Find the increment in radians when we move one dot with a particular sensitivity
 float viewAngleIncrementFinder(float mainSens) {
@@ -8,37 +7,27 @@ float viewAngleIncrementFinder(float mainSens) {
 }
 
 // Find the two angles between which our target angle is
-std::vector<float> dotTowardAngle(
+// If startingAngle == targetAngle, returns startingAngle.
+ClosestDotsToAngle dotTowardAngle(
     float viewAngleIncrement,
     float startingAngle,
     float targetAngle
-) {
+) noexcept {
 
-    float rightDot = 0.0f;
-    float leftDot = 0.0f;
-    // Using a vector because I don't know how else you would return 2 things with one function
-    std::vector<float> outAngles = {};
+    if (startingAngle == targetAngle)
+        return ClosestDotsToAngle(targetAngle, targetAngle);
+
 
     // Move startingAngle to the target one dot at a time(Increment if startingAngle is to the left of targetAngle, decrement if to the right)
     // Using an if-else statement instead of while because we only want one of these to happen
     if (startingAngle < targetAngle) {
         for (; startingAngle < targetAngle; startingAngle += viewAngleIncrement) {}
-        leftDot = startingAngle;
-        rightDot = leftDot - viewAngleIncrement;
-
+        return ClosestDotsToAngle(startingAngle, startingAngle - viewAngleIncrement);
     }
-    else
-        if (startingAngle > targetAngle) {
-            for (; startingAngle > targetAngle; startingAngle -= viewAngleIncrement) {}
-            rightDot = startingAngle;
-            leftDot = rightDot + viewAngleIncrement;
-        }
-        else
-            if (startingAngle == targetAngle) outAngles.push_back(-1);
-    if (startingAngle == targetAngle) outAngles.push_back(-2);
-    outAngles.push_back(rightDot);
-    outAngles.push_back(leftDot);
-    return outAngles;
+    else if (startingAngle > targetAngle) {
+        for (; startingAngle > targetAngle; startingAngle -= viewAngleIncrement) {}
+        return ClosestDotsToAngle(startingAngle + viewAngleIncrement, startingAngle);
+    }
 }
 
 // Find the view angle after doing the specified number of clockwise turns
@@ -47,7 +36,7 @@ float angleAfterTurns(
     float viewAngleIncrement,
     float startingAngle,
     int counterClockwiseTurns
-) {
+) noexcept {
     // Depending on which way we are turning, increment/decrement the startingAngle
     // When we cross the zero boundary, we have completed a turn
     // Since radians work mod two pi, we subtract/add two pi to the resulting angle
@@ -55,43 +44,43 @@ float angleAfterTurns(
         startingAngle -= viewAngleIncrement;
         if (startingAngle < 0) {
             counterClockwiseTurns--;
-            startingAngle += twoPi;
+            startingAngle += twoPiRadians;
         }
     }
     while (counterClockwiseTurns < 0) {
         startingAngle += viewAngleIncrement;
-        if (startingAngle > twoPi) {
+        if (startingAngle > twoPiRadians) {
             counterClockwiseTurns++;
-            startingAngle -= twoPi;
+            startingAngle -= twoPiRadians;
         }
     }
     return startingAngle;
 }
 
-std::vector<float> calcZoomSensManip(
+std::vector<ZoomSensManipResult> calcZoomSensManip(
     float viewAngleIncrement,
     float startingAngle,
-    float targetAngle1,
-    float targetAngle2,
+    float targetAngleLow,
+    float targetAngleHigh,
     float zoomFactor,
     int counterClockwiseTurns,
     int maxDots
 ) {
     startingAngle = angleAfterTurns(viewAngleIncrement, startingAngle, counterClockwiseTurns);
-    std::vector<float> x1x2 = dotTowardAngle(viewAngleIncrement, startingAngle, targetAngle1);
-    std::vector<float> p1p2 = dotTowardAngle(viewAngleIncrement, startingAngle, targetAngle2);
+    ClosestDotsToAngle x1x2 = dotTowardAngle(viewAngleIncrement, startingAngle, targetAngleLow);
+    ClosestDotsToAngle p1p2 = dotTowardAngle(viewAngleIncrement, startingAngle, targetAngleHigh);
 
-    std::vector<float> out = {};
+    std::vector<ZoomSensManipResult> out = {};
 
-    if (x1x2[0] == -1) { std::cout << "Target Angle 1 and starting angle are already matching!" << std::endl; return out; }
-    if (p1p2[0] == -1) { std::cout << "Target Angle 2 and starting angle are already matching!" << std::endl; return out; }
-    if (x1x2[0] == -2) { std::cout << "Target Angle 1 does not need a zoom manip" << std::endl; return out; }
-    if (p1p2[0] == -2) { std::cout << "Target Angle 2 does not need a zoom manip" << std::endl; return out; }
+    if (startingAngle >= targetAngleLow && startingAngle <= targetAngleHigh)
+    {
+        throw std::exception("startng angle already within target angle range: zoom manip not necessary");
+    }
 
-    float eq1delta1 = targetAngle1 - x1x2[0];
-    float eq2delta1 = targetAngle2 - p1p2[0];
-    float eq1delta2 = targetAngle1 - x1x2[1];
-    float eq2delta2 = targetAngle2 - p1p2[1];
+    float eq1delta1 = targetAngleLow - x1x2.closestRightDot;
+    float eq2delta1 = targetAngleHigh - p1p2.closestRightDot;
+    float eq1delta2 = targetAngleLow - x1x2.closestLeftDot;
+    float eq2delta2 = targetAngleHigh - p1p2.closestLeftDot;
     float y = 0.0f;
     int b = 0;
     float bCheck = 0.0f;
@@ -102,16 +91,20 @@ std::vector<float> calcZoomSensManip(
         b = eq2delta1 / y;
         bCheck = eq2delta1 / y;
         if (b == bCheck) {
-            out.push_back(y / (viewAngleIncrement / zoomFactor));
-            out.push_back(a);
-            out.push_back(b - a);
+            out.push_back(ZoomSensManipResult{
+                y / (viewAngleIncrement / zoomFactor), 
+                    a, 
+                    b - a
+                });
         }
         b = eq2delta2 / y;
         bCheck = eq2delta2 / y;
         if (b == bCheck) {
-            out.push_back(y / (viewAngleIncrement / zoomFactor));
-            out.push_back(a);
-            out.push_back(b - a);
+            out.push_back(ZoomSensManipResult{
+                y / (viewAngleIncrement / zoomFactor),
+                    a,
+                    b - a
+                });
         }
     }
     for (short a = -1; a >= -maxDots; a--) {
@@ -119,16 +112,20 @@ std::vector<float> calcZoomSensManip(
         b = eq2delta2 / y;
         bCheck = eq2delta2 / y;
         if (b == bCheck) {
-            out.push_back(y / (viewAngleIncrement / zoomFactor));
-            out.push_back(a);
-            out.push_back(b - a);
+            out.push_back(ZoomSensManipResult{
+                y / (viewAngleIncrement / zoomFactor), 
+                    a, 
+                    b - a
+                });
         }
         b = eq2delta1 / y;
         bCheck = eq2delta1 / y;
         if (b == bCheck) {
-            out.push_back(y / (viewAngleIncrement / zoomFactor));
-            out.push_back(a);
-            out.push_back(b - a);
+            out.push_back(ZoomSensManipResult{
+                y / (viewAngleIncrement / zoomFactor),
+                    a,
+                    b - a
+                });
         }
     }
     return out;

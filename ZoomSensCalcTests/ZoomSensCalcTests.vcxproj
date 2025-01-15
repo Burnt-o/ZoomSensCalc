@@ -167,14 +167,12 @@
     <ClCompile Include="ZoomSensCalcTests.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Constants.h" />
-    <ClInclude Include="ViewAngle.h" />
-    <ClInclude Include="WinUtilities.h" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\ZoomSensCalc\ZoomSensCalc.vcxproj">
       <Project>{edc25f7d-d541-4dcf-ac3c-a5380971c2b0}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ViewAngle.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
