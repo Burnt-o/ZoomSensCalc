@@ -22,10 +22,12 @@ ClosestDotsToAngle dotTowardAngle(
     // Using an if-else statement instead of while because we only want one of these to happen
     if (startingAngle < targetAngle) {
         for (; startingAngle < targetAngle; startingAngle += viewAngleIncrement) {}
+        if (startingAngle == targetAngle) return ClosestDotsToAngle(targetAngle, targetAngle);
         return ClosestDotsToAngle(startingAngle, startingAngle - viewAngleIncrement);
     }
     else if (startingAngle > targetAngle) {
         for (; startingAngle > targetAngle; startingAngle -= viewAngleIncrement) {}
+        if (startingAngle == targetAngle) return ClosestDotsToAngle(targetAngle, targetAngle);
         return ClosestDotsToAngle(startingAngle + viewAngleIncrement, startingAngle);
     }
 }
@@ -41,17 +43,17 @@ float angleAfterTurns(
     // When we cross the zero boundary, we have completed a turn
     // Since radians work mod two pi, we subtract/add two pi to the resulting angle
     while (counterClockwiseTurns > 0) {
-        startingAngle -= viewAngleIncrement;
-        if (startingAngle < 0) {
+        startingAngle += viewAngleIncrement;
+        if (startingAngle > twoPiRadians) {
             counterClockwiseTurns--;
-            startingAngle += twoPiRadians;
+            startingAngle -= twoPiRadians;
         }
     }
     while (counterClockwiseTurns < 0) {
-        startingAngle += viewAngleIncrement;
-        if (startingAngle > twoPiRadians) {
+        startingAngle -= viewAngleIncrement;
+        if (startingAngle < 0) {
             counterClockwiseTurns++;
-            startingAngle -= twoPiRadians;
+            startingAngle += twoPiRadians;
         }
     }
     return startingAngle;
@@ -63,10 +65,11 @@ std::vector<ZoomSensManipResult> calcZoomSensManip(
     float targetAngel1,
     float targetAngel2,
     float zoomFactor,
-    int counterClockwiseTurns,
+    int cCTurnsFor1,
+    int totalCCTurnsFor2,
     int maxDots
 ) {
-    startingAngle = angleAfterTurns(viewAngleIncrement, startingAngle, counterClockwiseTurns);
+    startingAngle = angleAfterTurns(viewAngleIncrement, startingAngle, cCTurnsFor1);
     ClosestDotsToAngle x1x2 = dotTowardAngle(viewAngleIncrement, startingAngle, targetAngel1);
     ClosestDotsToAngle p1p2 = dotTowardAngle(viewAngleIncrement, startingAngle, targetAngel2);
 
@@ -87,7 +90,7 @@ std::vector<ZoomSensManipResult> calcZoomSensManip(
         y = eq1delta1 / a;
         b = eq2delta1 / y;
         bCheck = eq2delta1 / y;
-        if (b == bCheck) {
+        if (b == bCheck && b <= maxDots) {
             out.push_back(ZoomSensManipResult{
                 y / (viewAngleIncrement / zoomFactor), 
                     a, 
@@ -96,7 +99,7 @@ std::vector<ZoomSensManipResult> calcZoomSensManip(
         }
         b = eq2delta2 / y;
         bCheck = eq2delta2 / y;
-        if (b == bCheck) {
+        if (b == bCheck && b <= maxDots) {
             out.push_back(ZoomSensManipResult{
                 y / (viewAngleIncrement / zoomFactor),
                     a,
