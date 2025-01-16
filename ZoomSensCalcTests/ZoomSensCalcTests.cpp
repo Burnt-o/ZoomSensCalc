@@ -82,7 +82,7 @@ namespace ZoomSensCalcTests
 
 		void ZoomSensManipCalc_MatchesSpreadsheet(float viewAngleIncrement, float startingAngle, float targetAngle, int zoomDots, float spreadsheetZoomSensitivityManip, float zoomFactor, int counterClockwiseTurns) const noexcept
 		{
-			auto zoomSensResult = calcZoomSensManip(viewAngleIncrement, startingAngle, targetAngle, targetAngle, 2, counterClockwiseTurns, 5);
+			auto zoomSensResult = calcZoomSensManip(viewAngleIncrement, startingAngle, targetAngle, targetAngle, 2, counterClockwiseTurns, 0, 5);
 
 			bool foundMatch = false;
 			for (auto& manip : zoomSensResult)
@@ -158,7 +158,7 @@ namespace ZoomSensCalcTests
 		// does a calculated zoom sensitivity manip ACTUALLY achieve the target angle, beginning at startingAngle?
 		void DoesCalculatedZoomSensManipActuallyWork(float viewAngleIncrement, float startingAngle, float targetAngle, float zoomFactor, int counterClockwiseTurns)
 		{
-			auto zoomSensResult = calcZoomSensManip(viewAngleIncrement, startingAngle, targetAngle, targetAngle, 2, counterClockwiseTurns, 5);
+			auto zoomSensResult = calcZoomSensManip(viewAngleIncrement, startingAngle, targetAngle, targetAngle, 2, counterClockwiseTurns, 0, 5);
 			Assert::IsTrue(zoomSensResult.size() == 10, StringToWString(std::format("Not enough results! {} manips calculated", zoomSensResult.size())).c_str());
 			
 			
@@ -197,7 +197,7 @@ namespace ZoomSensCalcTests
 
 		TEST_METHOD(ZoomSensManip_343_RS3_MatchesSpreadsheet_1DotRight)
 		{
-			ZoomSensManipCalc_MatchesSpreadsheet(viewAngleIncrementFinder(6.8f), 5.3184395f, 3.4001875f, -1, 1.95533666f, 2, -1);
+			ZoomSensManipCalc_MatchesSpreadsheet(viewAngleIncrementFinder(6.8f), 5.3184395f, 3.4001875f, -1, 1.95533666f, 2, 1);
 		}
 
 		TEST_METHOD(ZoomSensManip_343_RS3_ActuallyWorks)
@@ -206,6 +206,230 @@ namespace ZoomSensCalcTests
 		}
 
 
+		TEST_METHOD(ZoomSensManip_DOUBLE)
+		{
+			// gonna do a RS3 subpixel + the CJSS subpixel
+			float viewAngleIncrement = viewAngleIncrementFinder(6.8f);
+			float startingAngle = 5.3184395f;
+			float RS3Target = 3.4001875f;
+			float CJSSTarget = 5.0436749f;
+			float zoomFactor = 2;
+			int counterClockwiseTurns = -1;
+			int maxDots = 10000; // SURELY it'll find something with 10000 dots?
+
+			auto zoomSensResult = calcZoomSensManip(viewAngleIncrementFinder(6.8f), startingAngle, RS3Target, CJSSTarget, zoomFactor, counterClockwiseTurns, 0, maxDots);
+			Assert::IsFalse(zoomSensResult.empty(), L"Not enough results! No manips calculated");
+
+
+			// test each result
+			for (auto& manip : zoomSensResult)
+			{
+				/*			if (manip.ZoomSensitivityValue < 0.1f || manip.ZoomSensitivityValue > 2.f)
+								continue;*/
+
+								// Do the zoom sens manip
+				float RS3AttemptAngle = startingAngle + (manip.DotsToFirstAngle * manip.ZoomSensitivityValue * viewAngleIncrement / zoomFactor);
+
+				// move at regular view angle increment toward RS3Target
+				while (RS3AttemptAngle < RS3Target) // this var will end up either equal to or slightly greater than (leftwards) target angle 
+					RS3AttemptAngle += viewAngleIncrement;
+
+				float debugRS3High = RS3AttemptAngle;
+
+				while (RS3AttemptAngle > RS3Target) // this var will end up either equal to or slightly less than (rightwards) target angle
+					RS3AttemptAngle -= viewAngleIncrement;
+
+				// if manip worked, RS3AttemptAngle should exactly equal targetAngle
+				Assert::IsTrue(RS3AttemptAngle == RS3Target,
+					StringToWString(std::format("Zoom sens val {} with {} dots failed to RS3, TargetAngle: <{}> RS3AttemptAngleLow: <{}> RS3AttemptAngleHigh <{}>", manip.ZoomSensitivityValue, manip.DotsToFirstAngle, RS3Target, RS3AttemptAngle, debugRS3High)).c_str());
+
+
+
+				// do it AGAIN but start from RS3AttemptAngle, use extra dots, attempt to get to CJSS
+				// Do the zoom sens manip
+				float CJSSAttemptAngle = RS3AttemptAngle + (manip.SecondAngleExtraDots * manip.ZoomSensitivityValue * viewAngleIncrement / zoomFactor);
+
+				// move at regular view angle increment toward RS3Target
+				while (CJSSAttemptAngle < CJSSTarget) // this var will end up either equal to or slightly greater than (leftwards) target angle
+					CJSSAttemptAngle += viewAngleIncrement;
+
+				float debugCJSSHigh = CJSSAttemptAngle;
+
+				while (CJSSAttemptAngle > CJSSTarget) // this var will end up either equal to or slightly less than (rightwards) target angle
+					CJSSAttemptAngle -= viewAngleIncrement;
+
+				// if manip worked, CJSSAttemptAngle should exactly equal targetAngle
+				Assert::IsTrue(CJSSAttemptAngle == CJSSTarget,
+					StringToWString(std::format("Zoom sens val {} with {} dots failed to CJSS, TargetAngle: <{}> CJSSAttemptAngleLow: <{}> CJSSAttemptAngleHigh <{}>", manip.ZoomSensitivityValue, manip.SecondAngleExtraDots, CJSSTarget, CJSSAttemptAngle, debugCJSSHigh)).c_str());
+
+
+
+			}
+
+		}
+
+
+		TEST_METHOD(TwoTrickSameManipTest_1_NoTurns)
+		{
+			float startingAngle = 5.8857827f; // library start
+			float zoomSensThatWorks = 1.5f; // will check against
+			// then do one dot right
+			float targetAngle1 = 5.1400619f; // and you can reach this angle
+				// then do 2 dots left
+			float targetAngle2 = 3.8543358f; // and you can reach this angle
+
+			float viewAngleIncrement = viewAngleIncrementFinder(6.8f);
+
+			auto zoomSensResult = calcZoomSensManip(viewAngleIncrementFinder(6.8f), startingAngle, targetAngle1, targetAngle2, 2, 0, 0, 5);
+			Assert::IsFalse(zoomSensResult.empty(), L"Not enough results! No manips calculated");
+
+
+			std::stringstream ss;
+			for (auto& manip : zoomSensResult)
+			{
+				ss << manip << std::endl;
+				if (manip.DotsToFirstAngle == -1 && manip.SecondAngleExtraDots == 2)
+				{
+					if (manip.ZoomSensitivityValue == zoomSensThatWorks)
+						return; // Test passed!
+
+					// calculated zs may be different from what we used but still actually have the same result!
+					// so test for being within 1%
+					float differenceFromUsedValue = std::abs(zoomSensThatWorks - manip.ZoomSensitivityValue);
+					if (differenceFromUsedValue / zoomSensThatWorks < 0.01)
+						return; // Test passed!
+					else
+						Assert::Fail((StringToWString(std::format("Manip found with correct dots but incorrect sensitivity value. Expected: <{}> Actual: <{}>", zoomSensThatWorks, manip.ZoomSensitivityValue))).c_str());
+				}
+			}
+
+
+
+
+			Assert::Fail(StringToWString(std::format("Reproduction manip not found! But we did find: \n{}", ss.str())).c_str());
+		}
+
+
+		TEST_METHOD(TwoTrickSameManipTest_2_TurnBeforeFirst)
+		{
+			float startingAngle = 5.8857827f; // library start
+			float zoomSensThatWorks = 1.5f; // will check against
+			// then do one dot right & 1 counter clockwise turn
+			float targetAngle1 = 3.7386785f; // and you can reach this angle
+			// then do 2 dots left
+			float targetAngle2 = 5.3778143f; // and you can reach this angle
+
+			float viewAngleIncrement = viewAngleIncrementFinder(6.8f);
+
+			auto zoomSensResult = calcZoomSensManip(viewAngleIncrementFinder(6.8f), startingAngle, targetAngle1, targetAngle2, 2, 1, 1, 5);
+			Assert::IsFalse(zoomSensResult.empty(), L"Not enough results! No manips calculated");
+
+
+			std::stringstream ss;
+			for (auto& manip : zoomSensResult)
+			{
+				ss << manip << std::endl;
+				if (manip.DotsToFirstAngle == -1 && manip.SecondAngleExtraDots == 2)
+				{
+					if (manip.ZoomSensitivityValue == zoomSensThatWorks)
+						return; // Test passed!
+
+					// calculated zs may be different from what we used but still actually have the same result!
+					// so test for being within 1%
+					float differenceFromUsedValue = std::abs(zoomSensThatWorks - manip.ZoomSensitivityValue);
+					if (differenceFromUsedValue / zoomSensThatWorks < 0.01)
+						return; // Test passed!
+					else
+						Assert::Fail((StringToWString(std::format("Manip found with correct dots but incorrect sensitivity value. Expected: <{}> Actual: <{}>", zoomSensThatWorks, manip.ZoomSensitivityValue))).c_str());
+				}
+			}
+
+
+
+
+			Assert::Fail(StringToWString(std::format("Reproduction manip not found! But we did find: \n{}", ss.str())).c_str());
+		}
 	
+
+		TEST_METHOD(TwoTrickSameManipTest_3_TurnAfterFirst)
+		{
+			float startingAngle = 5.8857827f; // library start
+			float zoomSensThatWorks = 1.5f; // will check against
+			// then do one dot right 
+			float targetAngle1 = 5.1400619f; // and you can reach this angle
+			// then do 2 dots left and 1 clockwise turn
+			float targetAngle2 = 5.3216538f; // and you can reach this angle
+
+			float viewAngleIncrement = viewAngleIncrementFinder(6.8f);
+
+			auto zoomSensResult = calcZoomSensManip(viewAngleIncrementFinder(6.8f), startingAngle, targetAngle1, targetAngle2, 2, 0, -1, 5);
+			Assert::IsFalse(zoomSensResult.empty(), L"Not enough results! No manips calculated");
+
+
+			std::stringstream ss;
+			for (auto& manip : zoomSensResult)
+			{
+				ss << manip << std::endl;
+				if (manip.DotsToFirstAngle == -1 && manip.SecondAngleExtraDots == 2)
+				{
+					if (manip.ZoomSensitivityValue == zoomSensThatWorks)
+						return; // Test passed!
+
+					// calculated zs may be different from what we used but still actually have the same result!
+					// so test for being within 1%
+					float differenceFromUsedValue = std::abs(zoomSensThatWorks - manip.ZoomSensitivityValue);
+					if (differenceFromUsedValue / zoomSensThatWorks < 0.01)
+						return; // Test passed!
+					else
+						Assert::Fail((StringToWString(std::format("Manip found with correct dots but incorrect sensitivity value. Expected: <{}> Actual: <{}>", zoomSensThatWorks, manip.ZoomSensitivityValue))).c_str());
+				}
+			}
+
+
+
+
+			Assert::Fail(StringToWString(std::format("Reproduction manip not found! But we did find: \n{}", ss.str())).c_str());
+		}
+
+
+		TEST_METHOD(TwoTrickSameManipTest_4_TurnBeforeBoth)
+		{
+			float startingAngle = 5.8857827f; // library start
+			float zoomSensThatWorks = 1.5f; // will check against
+			// then do one dot right & 1 counter clockwise turn
+			float targetAngle1 = 1.6554151f; // and you can reach this angle
+			// then do 2 dots left and 2 more counter clockwise turns
+			float targetAngle2 = 2.6755407f; // and you can reach this angle
+
+			float viewAngleIncrement = viewAngleIncrementFinder(6.8f);
+
+			auto zoomSensResult = calcZoomSensManip(viewAngleIncrementFinder(6.8f), startingAngle, targetAngle1, targetAngle2, 2, 1, 3, 5);
+			Assert::IsFalse(zoomSensResult.empty(), L"Not enough results! No manips calculated");
+
+
+			std::stringstream ss;
+			for (auto& manip : zoomSensResult)
+			{
+				ss << manip << std::endl;
+				if (manip.DotsToFirstAngle == -1 && manip.SecondAngleExtraDots == 2)
+				{
+					if (manip.ZoomSensitivityValue == zoomSensThatWorks)
+						return; // Test passed!
+
+					// calculated zs may be different from what we used but still actually have the same result!
+					// so test for being within 1%
+					float differenceFromUsedValue = std::abs(zoomSensThatWorks - manip.ZoomSensitivityValue);
+					if (differenceFromUsedValue / zoomSensThatWorks < 0.01)
+						return; // Test passed!
+					else
+						Assert::Fail((StringToWString(std::format("Manip found with correct dots but incorrect sensitivity value. Expected: <{}> Actual: <{}>", zoomSensThatWorks, manip.ZoomSensitivityValue))).c_str());
+				}
+			}
+
+
+
+
+			Assert::Fail(StringToWString(std::format("Reproduction manip not found! But we did find: \n{}", ss.str())).c_str());
+		}
 	};
 }

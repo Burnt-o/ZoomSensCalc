@@ -52,9 +52,9 @@ struct ZoomSensManipResult
 std::vector<ZoomSensManipResult> calcZoomSensManip(
     float viewAngleIncrement,
     float startingAngle,
-    float targetAngle1,
-    float targetAngle2,
+    float targetAngel1,
+    float targetAngel2,
     float zoomFactor,
-    int counterClockwiseTurns,
-    int maxDots
-);
+    int cCTurnsFor1,
+    int totalCCTurnsFor2,
+    int maxDots);

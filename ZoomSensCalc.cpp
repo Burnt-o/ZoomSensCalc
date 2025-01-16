@@ -70,8 +70,8 @@ std::vector<ZoomSensManipResult> calcZoomSensManip(
     int maxDots
 ) {
     startingAngle = angleAfterTurns(viewAngleIncrement, startingAngle, cCTurnsFor1);
-    ClosestDotsToAngle x1x2 = dotTowardAngle(viewAngleIncrement, startingAngle, targetAngel1);
-    ClosestDotsToAngle p1p2 = dotTowardAngle(viewAngleIncrement, startingAngle, targetAngel2);
+    ClosestDotsToAngle x1x2 = dotTowardAngle(viewAngleIncrement, angleAfterTurns(viewAngleIncrement, startingAngle, cCTurnsFor1), targetAngel1);
+    ClosestDotsToAngle p1p2 = dotTowardAngle(viewAngleIncrement, angleAfterTurns(viewAngleIncrement, startingAngle, totalCCTurnsFor2), targetAngel2);
 
     std::vector<ZoomSensManipResult> out = {};
 
