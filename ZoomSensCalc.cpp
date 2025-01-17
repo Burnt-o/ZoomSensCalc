@@ -1,9 +1,24 @@
 #include "ZoomSensCalc.h"
 #include "Constants.h"
 
+
+bool is_nearly_integer(float k)
+{
+    return std::round(k) - k < 0.001f;
+}
+
+
+
 // Find the increment in radians when we move one dot with a particular sensitivity
 float viewAngleIncrementFinder(float mainSens) {
-    return mainSens * 0.0003878509742f; // Magic number found by Burnt
+    constexpr float c1 = 0.02222222276f;
+    constexpr float c2 = 3.141592741f;
+    constexpr float c3 = 180.f;
+
+    mainSens *= c1;
+    mainSens *= c2;
+    mainSens /= c3;
+    return mainSens;
 }
 
 // Find the two angles between which our target angle is
@@ -88,8 +103,7 @@ std::vector<ZoomSensManipResult> calcZoomSensManip(
     for (short a = 1; a <= maxDots; a++) {
         y = eq1delta1 / a;
         b = eq2delta1 / y;
-        bCheck = eq2delta1 / y;
-        if (b == bCheck && b <= maxDots) {
+        if (is_nearly_integer(eq2delta1 / y) && b <= maxDots) {
             out.push_back(ZoomSensManipResult{
                 y / (viewAngleIncrement / zoomFactor), 
                     a, 
@@ -97,8 +111,7 @@ std::vector<ZoomSensManipResult> calcZoomSensManip(
                 });
         }
         b = eq2delta2 / y;
-        bCheck = eq2delta2 / y;
-        if (b == bCheck && b <= maxDots) {
+        if (is_nearly_integer(eq2delta2 / y) && b <= maxDots) {
             out.push_back(ZoomSensManipResult{
                 y / (viewAngleIncrement / zoomFactor),
                     a,
@@ -109,8 +122,7 @@ std::vector<ZoomSensManipResult> calcZoomSensManip(
     for (short a = -1; a >= -maxDots; a--) {
         y = eq1delta2 / a;
         b = eq2delta2 / y;
-        bCheck = eq2delta2 / y;
-        if (b == bCheck) {
+        if (is_nearly_integer(eq2delta2 / y)) {
             out.push_back(ZoomSensManipResult{
                 y / (viewAngleIncrement / zoomFactor), 
                     a, 
@@ -118,8 +130,7 @@ std::vector<ZoomSensManipResult> calcZoomSensManip(
                 });
         }
         b = eq2delta1 / y;
-        bCheck = eq2delta1 / y;
-        if (b == bCheck) {
+        if (is_nearly_integer(eq2delta1 / y)) {
             out.push_back(ZoomSensManipResult{
                 y / (viewAngleIncrement / zoomFactor),
                     a,
