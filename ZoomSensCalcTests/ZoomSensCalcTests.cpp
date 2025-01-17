@@ -4,6 +4,7 @@
 #include <format>
 #include "ViewAngle.h"
 #include <string>
+#include <optional>
 
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
@@ -17,10 +18,12 @@ namespace ZoomSensCalcTests
 
 
 	// does a calculated zoom sensitivity manip ACTUALLY achieve the target angle, beginning at startingAngle?
-	void DoesCalculatedZoomSensManipActuallyWork(float viewAngleIncrement, float startingAngle, float targetAngle, float zoomFactor, int counterClockwiseTurns)
+	void DoesCalculatedZoomSensManipActuallyWork(float viewAngleIncrement, float startingAngle, float targetAngle, float zoomFactor, int counterClockwiseTurns, std::optional<int> expectedResultCount = 10)
 	{
-		auto zoomSensResult = calcZoomSensManip(viewAngleIncrement, startingAngle, targetAngle, targetAngle, 2, counterClockwiseTurns, 0, 5);
-		Assert::IsTrue(zoomSensResult.size() >= 10, StringToWString(std::format("Not enough results! {} manips calculated", zoomSensResult.size())).c_str());
+		auto zoomSensResult = calcZoomSensManip(viewAngleIncrement, startingAngle, targetAngle, targetAngle, 2, counterClockwiseTurns, counterClockwiseTurns, 5);
+
+		if (expectedResultCount.has_value())
+			Assert::IsTrue(zoomSensResult.size() >= expectedResultCount.value(), StringToWString(std::format("Not enough results! {} manips calculated", zoomSensResult.size())).c_str());
 
 
 		// test each result
@@ -30,7 +33,7 @@ namespace ZoomSensCalcTests
 							continue;*/
 
 							// Do the zoom sens manip
-			float closestIncrementHigh = startingAngle + (manip.DotsToFirstAngle * manip.ZoomSensitivityValue * viewAngleIncrement / zoomFactor);
+			float closestIncrementHigh = angleAfterTurns(viewAngleIncrement, startingAngle, counterClockwiseTurns) + (manip.DotsToFirstAngle * manip.ZoomSensitivityValue * viewAngleIncrement / zoomFactor);
 			float closestIncrementLow = closestIncrementHigh;
 
 			// move at regular view angle increment toward target angle
@@ -41,7 +44,7 @@ namespace ZoomSensCalcTests
 				closestIncrementLow -= viewAngleIncrement;
 
 			// if manip worked, startingAngle should exactly equal targetAngle
-			Assert::IsTrue(closestIncrementHigh >= targetAngle && closestIncrementLow <= targetAngle,
+			Assert::IsTrue(closestIncrementHigh == targetAngle || closestIncrementLow == targetAngle,
 				StringToWString(std::format("Zoom sens val {} with {} dots failed, TargetAngle: <{}> ClosestLow: <{}> ClosestRight: <{}>", manip.ZoomSensitivityValue, manip.DotsToFirstAngle, targetAngle, closestIncrementLow, closestIncrementHigh)).c_str());
 		}
 	}
@@ -485,6 +488,25 @@ namespace ZoomSensCalcTests
 
 
 			Assert::Fail(StringToWString(std::format("Reproduction manip not found! But we did find: \n{}", ss.str())).c_str());
+		}
+
+		TEST_METHOD(TwoTrickSameManipTest_5_343)
+		{
+			float startingAngle = 5.315194607f; // 343 start if you turn left as soon as you gain control
+			float targetAngle1 = 3.4001875f; // 1st of 4 valid subpixels for RS3
+			float targetAngle2 = 5.0436749f; // 1 of 2 valid subpixels for CJSS
+
+			float viewAngleIncrement = viewAngleIncrementFinder(6.8f);
+
+			auto zoomSensResult = calcZoomSensManip(viewAngleIncrementFinder(6.8f), startingAngle, targetAngle1, targetAngle2, 2, -1, -1, 100);
+			Assert::IsFalse(zoomSensResult.empty(), L"Not enough results! No manips calculated");
+
+
+			for (auto& manip : zoomSensResult)
+			{
+				DoesCalculatedZoomSensManipActuallyWork(viewAngleIncrementFinder(6.8f), startingAngle, targetAngle1, 2, -1, 1);
+				DoesCalculatedZoomSensManipActuallyWork(viewAngleIncrementFinder(6.8f), targetAngle1, targetAngle2, 2, -1, 1);
+			}
 		}
 	};
 }

@@ -10,31 +10,37 @@ int main() {
     float zoomFactor = 0.0f;
     int maxDots = 0;
 
-    while (true) {
-        try {
-        std::cout << "Main sensitivity: ";
-        std::cin >> sens;
-        std::cout << "\nStarting angle: ";
-        std::cin >> startingAngle;
-        std::cout << "\nTarget Angle 1: ";
-        std::cin >> targetAngle1;
-        std::cout << "\nTarget Angle 2: ";
-        std::cin >> targetAngle2;
-        std::cout << "\nThe number of counter clockwise turns you will be doing before the first trick(Negative values for clockwise): ";
-        std::cin >> cCTurns1;
-        std::cout << "\nThe total number of turns you will be doing before the second trick: ";
-        std::cin >> cCturns2;
-        std::cout << "\nThe zoom factor of your weapon: ";
-        std::cin >> zoomFactor;
-        std::cout << "\nThe maximum number of dots to use: ";
-        std::cin >> maxDots;
-        }
-        catch (...) {
-            std::cerr << "\nInvalid value, please try again" << std::endl;
-            continue;
-        }
+
+    std::cout << "Main sensitivity: ";
+    std::cin >> sens;
+    std::cout << "\nStarting angle: ";
+    std::cin >> startingAngle;
+    std::cout << "\nTarget Angle 1: ";
+    std::cin >> targetAngle1;
+    std::cout << "\nTarget Angle 2: ";
+    std::cin >> targetAngle2;
+    std::cout << "\nThe number of counter clockwise turns you will be doing before the first trick(Negative values for clockwise): ";
+    std::cin >> cCTurns1;
+    std::cout << "\nThe total number of turns you will be doing before the second trick: ";
+    std::cin >> cCturns2;
+    std::cout << "\nThe zoom factor of your weapon: ";
+    std::cin >> zoomFactor;
+    std::cout << "\nThe maximum number of dots to use: ";
+    std::cin >> maxDots;
+
+
         float viewAngleIncrement = viewAngleIncrementFinder(sens);
         std::cout << "\nCalculating manip..." << std::endl;
+        std::cout << "with params:" << std::endl;
+        std::cout << "sens:" << sens << std::endl;
+        std::cout << "viewAngleIncrement:" << viewAngleIncrement << std::endl;
+        std::cout << "startingAngle:" << startingAngle << std::endl;
+        std::cout << "targetAngle1:" << targetAngle1 << std::endl;
+        std::cout << "targetAngle2:" << targetAngle2 << std::endl;
+        std::cout << "cCTurns1:" << cCTurns1 << std::endl;
+        std::cout << "cCturns2:" << cCturns2 << std::endl;
+        std::cout << "zoomFactor:" << zoomFactor << std::endl;
+        std::cout << "maxDots:" << maxDots << std::endl;
         auto zoomSensResult = calcZoomSensManip(viewAngleIncrement, startingAngle, targetAngle1, targetAngle2, zoomFactor, cCTurns1, cCturns2, maxDots);
 
         if (zoomSensResult.empty()) std::cout << "\nNo manips found" << std::endl;
@@ -42,7 +48,7 @@ int main() {
         for (auto& manip : zoomSensResult) {
             std::cout << manip << std::endl;
         }
-    }
+
 
     // {
     //     std::cout << "Calculating zoom sens manip for SC!" << std::endl;
