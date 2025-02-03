@@ -1,12 +1,34 @@
-#include "ZoomSensCalc.h"
+#include <string>
+#include <array>
+#include <vector>
+#include <iomanip>
+#include <cassert>
+#include <iostream>
+#include <cmath>
+#include <format>
 #include "Constants.h"
 
-
-bool is_nearly_integer(float k)
+struct ClosestDotsToAngle
 {
-    return std::round(k) - k < 0.001f;
-}
+    float closestLeftDot;
+    float closestRightDot;
 
+    explicit ClosestDotsToAngle(float l, float r) : closestLeftDot(l), closestRightDot(r) { assert(l >= r); }
+};
+
+struct ZoomSensManipResult
+{
+    float ZoomSensitivityValue; // value to set in MCC settings menu
+    int DotsToFirstAngle; 
+    int SecondAngleExtraDots;
+
+    friend std::ostream& operator<<(std::ostream& o, ZoomSensManipResult const& res) {
+        o << "Zoom Sensitivity Value: " << res.ZoomSensitivityValue << std::endl;
+        o << "Dots to first angle: " << res.DotsToFirstAngle << std::endl;
+        o << "Additonal dots to second angle: " <<res.SecondAngleExtraDots << std::endl;
+        return o;
+    }
+};
 
 
 // Find the increment in radians when we move one dot with a particular sensitivity
@@ -77,66 +99,81 @@ float angleAfterTurns(
 std::vector<ZoomSensManipResult> calcZoomSensManip(
     float viewAngleIncrement,
     float startingAngle,
-    float targetAngel1,
-    float targetAngel2,
+    float targetAngle1,
+    float targetAngle2,
     float zoomFactor,
     int cCTurnsFor1,
     int totalCCTurnsFor2,
     int maxDots
 ) {
-    ClosestDotsToAngle x1x2 = dotTowardAngle(viewAngleIncrement, angleAfterTurns(viewAngleIncrement, startingAngle, cCTurnsFor1), targetAngel1);
-    ClosestDotsToAngle p1p2 = dotTowardAngle(viewAngleIncrement, angleAfterTurns(viewAngleIncrement, startingAngle, totalCCTurnsFor2), targetAngel2);
+    ClosestDotsToAngle x1x2 = dotTowardAngle(viewAngleIncrement, angleAfterTurns(viewAngleIncrement, startingAngle, cCTurnsFor1), targetAngle1);
+    ClosestDotsToAngle p1p2 = dotTowardAngle(viewAngleIncrement, angleAfterTurns(viewAngleIncrement, startingAngle, totalCCTurnsFor2), targetAngle2);
 
     std::vector<ZoomSensManipResult> out = {};
 
+    float eq1delta1 = targetAngle1 - x1x2.closestRightDot;
+    float eq2delta1 = targetAngle2 - p1p2.closestRightDot;
+    float eq1delta2 = targetAngle1 - x1x2.closestLeftDot;
+    float eq2delta2 = targetAngle2 - p1p2.closestLeftDot;
 
-
-    float eq1delta1 = targetAngel1 - x1x2.closestRightDot;
-    float eq2delta1 = targetAngel2 - p1p2.closestRightDot;
-    float eq1delta2 = targetAngel1 - x1x2.closestLeftDot;
-    float eq2delta2 = targetAngel2 - p1p2.closestLeftDot;
+    float eq2delta1C = targetAngle2 - p1p2.closestRightDot;
+    float eq2delta2C = targetAngle2 - p1p2.closestLeftDot;
     float y = 0.0f;
     int b = 0;
     float bCheck = 0.0f;
 
     // bCheck exists only to check if b is actually an integer
-    for (short a = 1; a <= maxDots; a++) {
-        y = eq1delta1 / a;
-        b = eq2delta1 / y;
-        if (is_nearly_integer(eq2delta1 / y) && b <= maxDots) {
-            out.push_back(ZoomSensManipResult{
-                y / (viewAngleIncrement / zoomFactor), 
-                    a, 
-                    b - a
-                });
+    for (short i = 0; i <= maxDots; i++) {
+        for (short j = 0; j <= maxDots; j++) {
+            for (short a = 1; a <= maxDots; a++) {
+                y = eq1delta1 / a;
+                b = eq2delta1 / y;
+                bCheck = eq2delta1 / y;
+                if (abs(b - bCheck) <= 0.001f && abs(b - a) <= maxDots) {
+                    out.push_back(ZoomSensManipResult{
+                        y / (viewAngleIncrement / zoomFactor),
+                            a,
+                            b - a
+                        });
+                }
+                b = eq2delta2 / y;
+                bCheck = eq2delta2 / y;
+                if (abs(b - bCheck) <= 0.001f && abs(b - a) <= maxDots) {
+                    out.push_back(ZoomSensManipResult{
+                        y / (viewAngleIncrement / zoomFactor),
+                            a,
+                            b - a
+                        });
+                }
+            }
+            for (short a = -1; a >= -maxDots; a--) {
+                y = eq1delta2 / a;
+                b = eq2delta2 / y;
+                bCheck = eq2delta2 / y;
+                if (abs(b - bCheck) <= 0.001f && abs(b - a) <= maxDots) {
+                    out.push_back(ZoomSensManipResult{
+                        y / (viewAngleIncrement / zoomFactor),
+                            a,
+                            b - a
+                        });
+                }
+                b = eq2delta1 / y;
+                bCheck = eq2delta1 / y;
+                if (abs(b - bCheck) <= 0.001f && abs(b - a) <= maxDots) {
+                    out.push_back(ZoomSensManipResult{
+                        y / (viewAngleIncrement / zoomFactor),
+                            a,
+                            b - a
+                        });
+                }
+            }
+            eq2delta1 += viewAngleIncrement;
+            eq2delta2 -= viewAngleIncrement;
         }
-        b = eq2delta2 / y;
-        if (is_nearly_integer(eq2delta2 / y) && b <= maxDots) {
-            out.push_back(ZoomSensManipResult{
-                y / (viewAngleIncrement / zoomFactor),
-                    a,
-                    b - a
-                });
-        }
-    }
-    for (short a = -1; a >= -maxDots; a--) {
-        y = eq1delta2 / a;
-        b = eq2delta2 / y;
-        if (is_nearly_integer(eq2delta2 / y)) {
-            out.push_back(ZoomSensManipResult{
-                y / (viewAngleIncrement / zoomFactor), 
-                    a, 
-                    b - a
-                });
-        }
-        b = eq2delta1 / y;
-        if (is_nearly_integer(eq2delta1 / y)) {
-            out.push_back(ZoomSensManipResult{
-                y / (viewAngleIncrement / zoomFactor),
-                    a,
-                    b - a
-                });
-        }
+        eq1delta1 += viewAngleIncrement;
+        eq1delta2 -= viewAngleIncrement;
+        eq2delta1 = eq2delta1C;
+        eq2delta2 = eq2delta2C;
     }
     return out;
 }
