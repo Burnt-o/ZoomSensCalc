@@ -1,38 +1,9 @@
-#include <string>
-#include <array>
-#include <vector>
-#include <iomanip>
-#include <cassert>
-#include <iostream>
-#include <cmath>
-#include <format>
-#include "Constants.h"
+#include "ZoomSensCalc.h"
 
-struct ClosestDotsToAngle
-{
-    float closestLeftDot;
-    float closestRightDot;
-
-    explicit ClosestDotsToAngle(float l, float r) : closestLeftDot(l), closestRightDot(r) { assert(l >= r); }
-};
-
-struct ZoomSensManipResult
-{
-    float ZoomSensitivityValue; // value to set in MCC settings menu
-    int DotsToFirstAngle; 
-    int SecondAngleExtraDots;
-
-    friend std::ostream& operator<<(std::ostream& o, ZoomSensManipResult const& res) {
-        o << "Zoom Sensitivity Value: " << res.ZoomSensitivityValue << std::endl;
-        o << "Dots to first angle: " << res.DotsToFirstAngle << std::endl;
-        o << "Additonal dots to second angle: " <<res.SecondAngleExtraDots << std::endl;
-        return o;
-    }
-};
-
+constexpr float twoPiRadians = 6.283185482f;
 
 // Find the increment in radians when we move one dot with a particular sensitivity
-float viewAngleIncrementFinder(float mainSens) {
+float viewAngleIncrementFinder(float& mainSens) {
     constexpr float c1 = 0.02222222276f;
     constexpr float c2 = 3.141592741f;
     constexpr float c3 = 180.f;
@@ -46,9 +17,9 @@ float viewAngleIncrementFinder(float mainSens) {
 // Find the two angles between which our target angle is
 // If startingAngle == targetAngle, returns startingAngle.
 ClosestDotsToAngle dotTowardAngle(
-    float viewAngleIncrement,
+    const float& viewAngleIncrement,
     float startingAngle,
-    float targetAngle
+    const float& targetAngle
 ) noexcept {
 
     if (startingAngle == targetAngle)
@@ -72,9 +43,9 @@ ClosestDotsToAngle dotTowardAngle(
 // Find the view angle after doing the specified number of clockwise turns
 // Specifically, the first angle we get after crossing the zero bundary
 float angleAfterTurns(
-    float viewAngleIncrement,
+    const float& viewAngleIncrement,
     float startingAngle,
-    int counterClockwiseTurns
+    int& counterClockwiseTurns
 ) noexcept {
     // Depending on which way we are turning, increment/decrement the startingAngle
     // When we cross the zero boundary, we have completed a turn
@@ -97,14 +68,14 @@ float angleAfterTurns(
 }
 
 std::vector<ZoomSensManipResult> calcZoomSensManip(
-    float viewAngleIncrement,
-    float startingAngle,
-    float targetAngle1,
-    float targetAngle2,
-    float zoomFactor,
-    int cCTurnsFor1,
-    int totalCCTurnsFor2,
-    int maxDots
+    const float& viewAngleIncrement,
+    float& startingAngle,
+    const float& targetAngle1,
+    const float& targetAngle2,
+    const float& zoomFactor,
+    int& cCTurnsFor1,
+    int& totalCCTurnsFor2,
+    const int& maxDots
 ) {
     ClosestDotsToAngle x1x2 = dotTowardAngle(viewAngleIncrement, angleAfterTurns(viewAngleIncrement, startingAngle, cCTurnsFor1), targetAngle1);
     ClosestDotsToAngle p1p2 = dotTowardAngle(viewAngleIncrement, angleAfterTurns(viewAngleIncrement, startingAngle, totalCCTurnsFor2), targetAngle2);
@@ -116,15 +87,15 @@ std::vector<ZoomSensManipResult> calcZoomSensManip(
     float eq1delta2 = targetAngle1 - x1x2.closestLeftDot;
     float eq2delta2 = targetAngle2 - p1p2.closestLeftDot;
 
-    float eq2delta1C = targetAngle2 - p1p2.closestRightDot;
-    float eq2delta2C = targetAngle2 - p1p2.closestLeftDot;
+    float eq2delta1Copy = eq2delta1;
+    float eq2delta2Copy = eq2delta2;
     float y = 0.0f;
     int b = 0;
     float bCheck = 0.0f;
 
     // bCheck exists only to check if b is actually an integer
-    for (short i = 0; i <= maxDots; i++) {
-        for (short j = 0; j <= maxDots; j++) {
+    for (unsigned short i = 0; i <= maxDots; i++) {
+        for (unsigned short j = 0; j <= maxDots; j++) {
             for (short a = 1; a <= maxDots; a++) {
                 y = eq1delta1 / a;
                 b = eq2delta1 / y;
@@ -172,8 +143,8 @@ std::vector<ZoomSensManipResult> calcZoomSensManip(
         }
         eq1delta1 += viewAngleIncrement;
         eq1delta2 -= viewAngleIncrement;
-        eq2delta1 = eq2delta1C;
-        eq2delta2 = eq2delta2C;
+        eq2delta1 = eq2delta1Copy;
+        eq2delta2 = eq2delta2Copy;
     }
     return out;
 }
